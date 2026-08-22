@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- SEO Meta Tags -->
+    <title>3D Fish Jump - Free Online HTML5 Game</title>
+    <meta name="title" content="3D Fish Jump - Free Online HTML5 Game">
+    <meta name="description" content="Play 3D Fish Jump online for free! Help the fish jump across water ponds in a beautiful 3D world. Easy to play, fun casual game with dynamic difficulty.">
+    <meta name="keywords" content="3d fish jump, fish jumping game, html5 game, free browser game, 3d casual game, play online games">
+    <meta name="author" content="Web Games Studio">
+    <meta name="robots" content="index, follow">
+
+    <!-- Open Graph / Facebook / WhatsApp -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="3D Fish Jump - Play Free Online Game">
+    <meta property="og:description" content="Hold to charge jump and land inside water ponds. Play 3D Fish Jump free in your browser!">
+    <meta property="og:image" content="https://files.catbox.moe/uczd75.png">
+
+    <!-- Twitter Cards -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="3D Fish Jump - Free Online Game">
+    <meta name="twitter:description" content="Hold to charge jump and land inside water ponds. Play 3D Fish Jump free in your browser!">
+    <meta name="twitter:image" content="https://files.catbox.moe/uczd75.png">
+
+    <!-- Browser Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22></text></svg>">
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "3D Fish Jump",
+      "operatingSystem": "Browser",
+      "applicationCategory": "GameApplication",
+      "genre": "Arcade",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "description": "A 3D casual browser game where players control a fish to hop between water ponds."
+    }
+    </script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background-color: #87ceeb;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none;
+            transition: background-color 2s ease;
+        }
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* --- Full Screen Start Overlay Image --- */
+        #start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #000;
+            background-image: url('https://files.catbox.moe/uczd75.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            z-index: 100;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #ui {
+            position: absolute;
+            top: 20px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            pointer-events: none;
+            z-index: 5;
+        }
+        .score {
+            font-size: 48px;
+            font-weight: bold;
+            color: #ffffff;
+            text-shadow: 2px 2px 8px rgba(0,0,0,0.6);
+        }
+        .lives {
+            font-size: 22px;
+            margin-top: 4px;
+            color: #ffeb3b;
+            text-shadow: 1px 1px 4px rgba(0,0,0,0.8);
+        }
+        .instruction {
+            margin-top: 8px;
+            font-size: 15px;
+            color: #fff;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 8px 18px;
+            border-radius: 20px;
+            backdrop-filter: blur(4px);
+        }
+        #music-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 45px;
+            height: 45px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+            backdrop-filter: blur(4px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            transition: transform 0.2s;
+        }
+        #music-btn:active {
+            transform: scale(0.9);
+        }
+        #power-meter {
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 220px;
+            height: 18px;
+            background: rgba(0,0,0,0.5);
+            border: 2px solid #fff;
+            border-radius: 10px;
+            overflow: hidden;
+            display: none;
+            z-index: 5;
+        }
+        #power-fill {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #4caf50, #ffeb3b, #f44336);
+        }
+        #game-over {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.75);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            z-index: 30;
+        }
+        #game-over h1 { font-size: 44px; color: #ff5252; margin-bottom: 10px; }
+        #game-over p { font-size: 18px; margin-bottom: 20px; color: #ddd; }
+        #restart-btn {
+            padding: 14px 36px;
+            font-size: 20px;
+            font-weight: bold;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            pointer-events: auto;
+        }
+        #restart-btn:active {
+            transform: scale(0.95);
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+<div id="start-screen"></div>
+<div id="canvas-container"></div>
+<button id="music-btn" title="Toggle Music"></button>
+
+<div id="ui">
+    <div class="score" id="score">0</div>
+    <div class="lives" id="lives"></div>
+    <div class="instruction">Hold karke power bharein aur jump karein!</div>
+</div>
+
+<div id="power-meter"><div id="power-fill"></div></div>
+
+<div id="game-over">
+    <h1>GAME OVER</h1>
+    <p>Aapki 3 Lives khatam ho gayi hain!</p>
+    <button id="restart-btn">Try Again</button>
+</div>
+
+<script>
+// --- Audio System ---
+const splashAudio = new Audio('https://files.catbox.moe/eizhrs.mp3');
+const bgMusic = new Audio('https://files.catbox.moe/r1txg9.mp3');
+bgMusic.loop = true;
+bgMusic.volume = 1.0;
+
+let isMusicMuted = false;
+let gameStarted = false;
+
+function playWaterLandSound() {
+    splashAudio.currentTime = 0;
+    splashAudio.play().catch(e => console.log("Audio play blocked: ", e));
+}
+
+function initStartScreen() {
+    const startScreen = document.getElementById('start-screen');
+    const startGame = () => {
+        if (!gameStarted) {
+            gameStarted = true;
+            startScreen.style.display = 'none';
+            if (!isMusicMuted && bgMusic.paused) {
+                bgMusic.play().catch(e => console.log("Bg audio play blocked: ", e));
+            }
+        }
+    };
+    startScreen.addEventListener('click', startGame);
+    startScreen.addEventListener('touchstart', startGame);
+}
+
+function initMusicControls() {
+    const musicBtn = document.getElementById('music-btn');
+    musicBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (isMusicMuted) {
+            bgMusic.play();
+            musicBtn.innerText = '';
+            isMusicMuted = false;
+        } else {
+            bgMusic.pause();
+            musicBtn.innerText = '';
+            isMusicMuted = true;
+        }
+    });
+}
+
+// --- Engine Variables ---
+let scene, camera, renderer;
+let ambientLight, dirLight;
+let fishGroup, tailMesh, waterPits = [], currentPitIndex = 0;
+let tiny3DFishes = [];
+let bubbles = [];
+let splashParticles = [];
+let gameState = 'READY';
+let chargePower = 0;
+const maxPower = 100;
+let score = 0;
+let lives = 3;
+let animClock = 0;
+
+let fishPos = new THREE.Vector3();
+let fishVel = new THREE.Vector3();
+const gravity = -0.0065;
+let cameraTarget = new THREE.Vector3();
+
+// Swimming Circle Variables for Main Fish
+let fishCircleAngle = 0;
+let fishSwimRadius = 0.5;
+
+// Weather Variables (Rain & Night Mode)
+let isNightAndRain = false;
+let rainSystem, rainGeo, rainCount = 1200;
+
+function init() {
+    const container = document.getElementById('canvas-container');
+
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x87ceeb);
+    scene.fog = new THREE.FogExp2(0x87ceeb, 0.012);
+
+    const aspect = window.innerWidth / window.innerHeight;
+    const d = 7.5;
+    camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 1000);
+    camera.position.set(-9, 11, -9);
+    camera.lookAt(0, 0, 0);
+
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
+    scene.add(ambientLight);
+
+    dirLight = new THREE.DirectionalLight(0xfffaed, 0.9);
+    dirLight.position.set(-10, 30, -10);
+    dirLight.castShadow = true;
+    scene.add(dirLight);
+
+    createGrassField();
+    create3DTinyTrees();
+    create3DFish();
+    createRainSystem();
+
+    spawnPit(new THREE.Vector3(0, 0, 0), 1.85);
+    spawnNextPit();
+
+    initStartScreen();
+    initMusicControls();
+
+    window.addEventListener('resize', onWindowResize);
+    window.addEventListener('mousedown', (e) => { 
+        if (!gameStarted || e.target.id === 'music-btn' || e.target.id === 'restart-btn') return;
+        if (gameState !== 'GAMEOVER') startCharge(); 
+    });
+    window.addEventListener('mouseup', (e) => { 
+        if (!gameStarted || e.target.id === 'music-btn' || e.target.id === 'restart-btn') return;
+        if (gameState !== 'GAMEOVER') releaseJump(); 
+    });
+    window.addEventListener('touchstart', (e) => {
+        if (!gameStarted || e.target.id === 'music-btn' || e.target.id === 'restart-btn') return;
+        if (gameState !== 'GAMEOVER') { e.preventDefault(); startCharge(); }
+    });
+    window.addEventListener('touchend', (e) => {
+        if (!gameStarted || e.target.id === 'music-btn' || e.target.id === 'restart-btn') return;
+        if (gameState !== 'GAMEOVER') { e.preventDefault(); releaseJump(); }
+    });
+
+    document.getElementById('restart-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        resetGame();
+    });
+
+    resetGame();
+    animate();
+}
+
+function onWindowResize() {
+    const aspect = window.innerWidth / window.innerHeight;
+    const d = 7.5;
+    camera.left = -d * aspect;
+    camera.right = d * aspect;
+    camera.top = d;
+    camera.bottom = -d;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+function createGrassField() {
+    const groundGeo = new THREE.PlaneGeometry(350, 350);
+    const groundMat = new THREE.MeshStandardMaterial({ color: 0x1b5e20, roughness: 0.9 });
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = 0;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    const bladeGeo = new THREE.ConeGeometry(0.12, 0.5, 4);
+    const bladeMat = new THREE.MeshStandardMaterial({ color: 0x76ff03, roughness: 0.6 });
+
+    for (let i = 0; i < 400; i++) {
+        const cluster = new THREE.Group();
+        const count = 3 + Math.floor(Math.random() * 3);
+        
+        for (let j = 0; j < count; j++) {
+            const blade = new THREE.Mesh(bladeGeo, bladeMat);
+            blade.position.set((Math.random() - 0.5) * 0.3, 0.25, (Math.random() - 0.5) * 0.3);
+            blade.rotation.y = Math.random() * Math.PI;
+            blade.rotation.z = (Math.random() - 0.5) * 0.4;
+            blade.castShadow = true;
+            cluster.add(blade);
+        }
+
+        const x = (Math.random() - 0.5) * 150;
+        const z = (Math.random() - 0.5) * 150;
+        cluster.position.set(x, 0, z);
+        scene.add(cluster);
+    }
+}
+
+function create3DTinyTrees() {
+    const trunkGeo = new THREE.CylinderGeometry(0.1, 0.15, 0.6, 8);
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x4e342e, roughness: 0.9 });
+
+    const leavesGeo = new THREE.ConeGeometry(0.5, 1.1, 8);
+    const leavesMat = new THREE.MeshStandardMaterial({ color: 0x2e7d32, roughness: 0.6 });
+
+    for (let i = 0; i < 60; i++) {
+        const x = (Math.random() - 0.5) * 160;
+        const z = (Math.random() - 0.5) * 160;
+
+        if (Math.abs(x) < 4 && Math.abs(z) < 4) continue;
+
+        const tree = new THREE.Group();
+
+        const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+        trunk.position.y = 0.3;
+        trunk.castShadow = true;
+        tree.add(trunk);
+
+        const leaves = new THREE.Mesh(leavesGeo, leavesMat);
+        leaves.position.y = 0.95;
+        leaves.castShadow = true;
+        tree.add(leaves);
+
+        const scale = 0.8 + Math.random() * 0.5;
+        tree.scale.set(scale, scale, scale);
+        tree.position.set(x, 0, z);scene.add(tree);
+    }
+}
+
+function create3DFish() {
+    fishGroup = new THREE.Group();
+
+    const bodyGeo = new THREE.SphereGeometry(0.38, 32, 16);
+    bodyGeo.scale(1.4, 0.85, 0.75);
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0xff6f00, roughness: 0.2 });
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    body.castShadow = true;
+    fishGroup.add(body);
+
+    const stripeGeo = new THREE.TorusGeometry(0.32, 0.05, 16, 32);
+    const stripeMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+    const stripe = new THREE.Mesh(stripeGeo, stripeMat);
+    stripe.rotation.y = Math.PI / 2;
+    stripe.position.x = 0.04;
+    fishGroup.add(stripe);
+
+    const eyeGeo = new THREE.SphereGeometry(0.07, 16, 16);
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+    const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
+    eyeL.position.set(0.35, 0.12, 0.22);
+    const eyeR = eyeL.clone();
+    eyeR.position.z = -0.22;
+    fishGroup.add(eyeL);
+    fishGroup.add(eyeR);
+
+    const tailGeo = new THREE.ConeGeometry(0.25, 0.5, 16);
+    const tailMat = new THREE.MeshStandardMaterial({ color: 0xe65100 });
+    tailMesh = new THREE.Mesh(tailGeo, tailMat);
+    tailMesh.rotation.z = -Math.PI / 2;
+    tailMesh.position.set(-0.6, 0, 0);
+    tailMesh.scale.set(1, 0.3, 1.2);
+    fishGroup.add(tailMesh);
+
+    scene.add(fishGroup);
+}
+
+function createTiny3DFishMesh(colorHex) {
+    const tinyGroup = new THREE.Group();
+
+    const bodyGeo = new THREE.SphereGeometry(0.08, 16, 12);
+    bodyGeo.scale(1.3, 0.8, 0.6);
+    const bodyMat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.3 });
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    tinyGroup.add(body);
+
+    const tailGeo = new THREE.ConeGeometry(0.06, 0.12, 12);
+    const tailMat = new THREE.MeshStandardMaterial({ color: colorHex });
+    const tail = new THREE.Mesh(tailGeo, tailMat);
+    tail.rotation.z = -Math.PI / 2;
+    tail.position.set(-0.12, 0, 0);
+    tinyGroup.add(tail);
+
+    tinyGroup.scale.set(1.2, 1.2, 1.2);
+    return tinyGroup;
+}
+
+function spawnPit(position, radius) {
+    const pitGroup = new THREE.Group();
+    pitGroup.position.copy(position);
+
+    const moundGeo = new THREE.CylinderGeometry(radius, radius + 0.2, 0.18, 32);
+    const moundMat = new THREE.MeshStandardMaterial({ color: 0x5d4037, roughness: 0.8 });
+    const mound = new THREE.Mesh(moundGeo, moundMat);
+    mound.position.y = 0.05;
+    mound.receiveShadow = true;
+    mound.castShadow = true;
+    pitGroup.add(mound);
+
+    const waterGeo = new THREE.CylinderGeometry(radius - 0.1, radius - 0.1, 0.12, 32);
+    const waterMat = new THREE.MeshStandardMaterial({
+        color: 0x00e5ff,
+        roughness: 0.05,
+        metalness: 0.1,
+        transparent: true,
+        opacity: 0.9
+    });
+    const water = new THREE.Mesh(waterGeo, waterMat);
+    water.position.y = 0.09;
+    pitGroup.add(water);
+
+    const innerGeo = new THREE.CircleGeometry(radius - 0.25, 32);
+    const innerMat = new THREE.MeshBasicMaterial({ color: 0x0091ea });
+    const inner = new THREE.Mesh(innerGeo, innerMat);
+    inner.rotation.x = -Math.PI / 2;
+    inner.position.y = 0.151;
+    pitGroup.add(inner);
+
+    pitGroup.userData = { waterMesh: water, radius: radius - 0.1 };
+    scene.add(pitGroup);
+    waterPits.push(pitGroup);
+
+    const fishColors = [0xff3d00, 0xffd600, 0x00e676, 0xff007f];
+    for (let i = 0; i < 3; i++) {
+        const color = fishColors[i % fishColors.length];
+        const tinyFish = createTiny3DFishMesh(color);
+
+        const r = 0.2 + Math.random() * (radius - 0.5);
+        const angle = Math.random() * Math.PI * 2;
+
+        tinyFish.position.set(
+            position.x + Math.cos(angle) * r,
+            0.12,
+            position.z + Math.sin(angle) * r
+        );
+        scene.add(tinyFish);
+
+        tiny3DFishes.push({
+            mesh: tinyFish,
+            center: position.clone(),
+            radius: r,
+            angle: angle,
+            speed: (0.012 + Math.random() * 0.015) * (Math.random() > 0.5 ? 1 : -1)
+        });
+    }
+}
+
+function spawnNextPit() {
+    const lastPit = waterPits[waterPits.length - 1];
+    
+    const wave = (Math.sin(score * 0.5) + 1) / 2; 
+    const currentRadius = 1.85 - (wave * 0.7);
+
+    const minDistance = 2.8 + (wave * 2.8);
+    const distance = minDistance + Math.random() * 0.4;
+
+    const isXDir = Math.random() > 0.5;
+    const newPos = lastPit.position.clone();
+    if (isXDir) newPos.x += distance;
+    else newPos.z += distance;
+
+    spawnPit(newPos, currentRadius);
+}
+
+// --- Rain Particle System ---
+function createRainSystem() {
+    rainGeo = new THREE.BufferGeometry();
+    const positions = new Float32Array(rainCount * 3);
+    const velocities = new Float32Array(rainCount);
+
+    for (let i = 0; i < rainCount; i++) {
+        positions[i * 3] = (Math.random() - 0.5) * 40;
+        positions[i * 3 + 1] = Math.random() * 25;
+        positions[i * 3 + 2] = (Math.random() - 0.5) * 40;
+        velocities[i] = 0.2 + Math.random() * 0.25;
+    }
+
+    rainGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    rainGeo.userData = { velocities: velocities };
+
+    const rainMat = new THREE.PointsMaterial({
+        color: 0x80deea,
+        size: 0.12,
+        transparent: true,
+        opacity: 0.7
+    });
+
+    rainSystem = new THREE.Points(rainGeo, rainMat);
+    rainSystem.visible = false;
+    scene.add(rainSystem);
+}
+
+function updateRain() {
+    if (!rainSystem || !rainSystem.visible) return;
+
+    const positions = rainGeo.attributes.position.array;
+    const velocities = rainGeo.userData.velocities;
+
+    for (let i = 0; i < rainCount; i++) {
+        positions[i * 3 + 1] -= velocities[i];
+        positions[i * 3] += 0.02;
+
+        if (positions[i * 3 + 1] < 0) {
+            positions[i * 3 + 1] = 20 + Math.random() * 5;
+            positions[i * 3] = fishPos.x + (Math.random() - 0.5) * 35;
+            positions[i * 3 + 2] = fishPos.z + (Math.random() - 0.5) * 35;
+        }
+    }
+    rainGeo.attributes.position.needsUpdate = true;
+}
+
+function checkWeatherChange() {
+    if (score >= 50 && !isNightAndRain) {
+        isNightAndRain = true;
+        scene.background = new THREE.Color(0x0a192f);
+        scene.fog.color = new THREE.Color(0x0a192f);
+        ambientLight.intensity = 0.3;
+        dirLight.intensity = 0.4;
+        if (rainSystem) rainSystem.visible = true;
+    } else if (score < 50 && isNightAndRain) {
+        isNightAndRain = false;
+        scene.background = new THREE.Color(0x87ceeb);
+        scene.fog.color = new THREE.Color(0x87ceeb);
+        ambientLight.intensity = 0.9;
+        dirLight.intensity = 0.9;
+        if (rainSystem) rainSystem.visible = false;
+    }
+}
+
+// --- Dynamic Particle Effects ---
+function spawnBubbles() {
+    if (gameState === 'READY' && Math.random() < 0.2) {
+        const bubbleGeo = new THREE.SphereGeometry(0.04 + Math.random() * 0.04, 8, 8);
+        const bubbleMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 });
+        const bubble = new THREE.Mesh(bubbleGeo, bubbleMat);
+
+        bubble.position.set(
+            fishPos.x + (Math.random() - 0.5) * 0.4,
+            fishPos.y,
+            fishPos.z + (Math.random() - 0.5) * 0.4
+        );
+
+        scene.add(bubble);
+        bubbles.push({ mesh: bubble, speed: 0.01 + Math.random() * 0.015, life: 1.0 });
+    }
+
+    for (let i = bubbles.length - 1; i >= 0; i--) {
+        const b = bubbles[i];
+        b.mesh.position.y += b.speed;
+        b.life -= 0.02;
+        b.mesh.material.opacity = b.life * 0.6;
+
+        if (b.life <= 0) {
+            scene.remove(b.mesh);
+            bubbles.splice(i, 1);
+        }
+    }
+}
+
+function createSplashEffect(pos) {
+    playWaterLandSound();
+
+    for (let i = 0; i < 25; i++) {
+        const splashGeo = new THREE.SphereGeometry(0.05 + Math.random() * 0.06, 8, 8);
+        const splashMat = new THREE.MeshBasicMaterial({ color: 0x80deea, transparent: true, opacity: 0.9 });
+        const p = new THREE.Mesh(splashGeo, splashMat);
+
+        p.position.copy(pos);
+        p.position.y = 0.15;
+
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 0.04 + Math.random() * 0.06;
+
+        scene.add(p);
+        splashParticles.push({
+            mesh: p,
+            vel: new THREE.Vector3(Math.cos(angle) * speed, 0.08 + Math.random() * 0.08, Math.sin(angle) * speed),
+            life: 1.0
+        });
+    }
+}
+
+function updateSplash() {
+    for (let i = splashParticles.length - 1; i >= 0; i--) {
+        const p = splashParticles[i];
+        p.mesh.position.add(p.vel);
+        p.vel.y += gravity * 0.5;
+        p.life -= 0.03;
+        p.mesh.material.opacity = Math.max(0, p.life);
+
+        if (p.life <= 0) {
+            scene.remove(p.mesh);
+            splashParticles.splice(i, 1);
+        }
+    }
+}
+
+// --- Gameplay Mechanics ---
+function updateLivesUI() {
+    let hearts = '';
+    for (let i = 0; i < 3; i++) {
+        hearts += (i < lives) ? '' : '';
+    }
+    document.getElementById('lives').innerText = hearts;
+}
+
+function startCharge() {
+    if (gameState === 'READY') {
+        gameState = 'CHARGING';
+        chargePower = 0;
+        document.getElementById('power-meter').style.display = 'block';
+    }
+}
+
+function releaseJump() {
+    if (gameState === 'CHARGING') {
+        gameState = 'JUMPING';
+        document.getElementById('power-meter').style.display = 'none';
+
+        const nextPit = waterPits[currentPitIndex + 1];
+        
+        const startPos = fishPos.clone();
+        const dir = new THREE.Vector3().subVectors(nextPit.position, startPos).normalize();
+
+        const jumpDistance = (chargePower / maxPower) * 7.5;
+        const totalVel = Math.sqrt(jumpDistance * -gravity);
+
+        fishVel.copy(dir).multiplyScalar(totalVel);
+        fishVel.y = totalVel * 1.15;
+    }
+}
+
+function respawnInCurrentPit() {
+    const currentPit = waterPits[currentPitIndex];
+    fishPos.copy(currentPit.position);
+    fishPos.y = 0.12;
+    fishGroup.position.copy(fishPos);
+    
+    // Completely reset orientation so the fish is straight and right side up
+    fishGroup.rotation.set(0, 0, 0);
+    
+    fishCircleAngle = 0;
+    gameState = 'READY';
+}
+
+function resetGame() {
+    score = 0;
+    lives = 3;
+    document.getElementById('score').innerText = score;
+    updateLivesUI();
+    document.getElementById('game-over').style.display = 'none';
+
+    waterPits.forEach(p => scene.remove(p));
+    waterPits = [];
+
+    tiny3DFishes.forEach(f => scene.remove(f.mesh));
+    tiny3DFishes = [];
+
+    currentPitIndex = 0;
+
+    spawnPit(new THREE.Vector3(0, 0, 0), 1.85);
+    spawnNextPit();
+
+    respawnInCurrentPit();
+    cameraTarget.set(0, 0, 0);
+
+    checkWeatherChange();
+}
+
+function updateGameLogic() {
+    animClock += 0.05;
+
+    const currentPit = waterPits[currentPitIndex];
+
+    if (gameState === 'READY') {
+        fishGroup.scale.set(1, 1, 1);
+
+        // Circular Swimming with Mouth Facing Forward
+        if (currentPit) {
+            const rad = Math.min(fishSwimRadius, currentPit.userData.radius * 0.5);
+            fishCircleAngle += 0.035;
+
+            fishPos.x = currentPit.position.x + Math.cos(fishCircleAngle) * rad;
+            fishPos.z = currentPit.position.z + Math.sin(fishCircleAngle) * rad;
+            fishPos.y = 0.12 + Math.sin(animClock * 2) * 0.02;
+
+            fishGroup.position.copy(fishPos);
+            
+            // Corrected angle calculation so mouth leads the swimming circle
+            fishGroup.rotation.set(0, -fishCircleAngle - Math.PI / 2, 0);
+        }
+
+        tailMesh.rotation.y = Math.sin(animClock * 4) * 0.4;
+    } else if (gameState === 'CHARGING') {
+        chargePower = Math.min(chargePower + 2.2, maxPower);
+        document.getElementById('power-fill').style.width = chargePower + '%';
+
+        // Face forward towards target pond
+        const targetPit = waterPits[currentPitIndex + 1];
+        if (targetPit) {
+            const lookDir = new THREE.Vector3().subVectors(targetPit.position, fishPos);
+            fishGroup.rotation.set(0, Math.atan2(-lookDir.z, lookDir.x), 0);
+        }
+
+        // Charge Stretch Animation
+        const squeeze = 1 - (chargePower / maxPower) * 0.25;
+        fishGroup.scale.set(squeeze, squeeze, squeeze * 1.1);
+        tailMesh.rotation.y = Math.sin(animClock * 8) * 0.5;
+    } else if (gameState === 'JUMPING') {
+        fishPos.add(fishVel);
+        fishVel.y += gravity;
+        fishGroup.position.copy(fishPos);
+
+        // Jump Arc Rotations (Mouth Forward)
+        const moveAngle = Math.atan2(-fishVel.z, fishVel.x);
+        const verticalAngle = Math.atan2(fishVel.y, Math.sqrt(fishVel.x * fishVel.x + fishVel.z * fishVel.z));
+        
+        fishGroup.rotation.set(0, moveAngle, verticalAngle);
+
+        tailMesh.rotation.y = Math.sin(animClock * 6) * 0.6;
+
+        // Landing Detection
+        if (fishPos.y <= 0.12) {
+            fishPos.y = 0.12;
+            const targetPit = waterPits[currentPitIndex + 1];
+            const dist = fishPos.distanceTo(targetPit.position);
+
+            if (dist <= targetPit.userData.radius) {
+                // Landed safely in next pond
+                currentPitIndex++;
+                score++;
+                document.getElementById('score').innerText = score;
+
+                createSplashEffect(fishPos);
+                checkWeatherChange();
+                spawnNextPit();
+
+                // Straighten fish immediately upon entering water
+                fishGroup.rotation.set(0, 0, 0);
+                gameState = 'READY';
+                cameraTarget.copy(targetPit.position);
+            } else {
+                // Missed Pond, Landed on Grass
+                lives--;
+                updateLivesUI();
+                
+                // Tilt fish sideways to show it fell on land
+                fishGroup.rotation.set(0, fishGroup.rotation.y, Math.PI / 2);
+
+                if (lives > 0) {
+                    gameState = 'RESPAWNING';
+                    setTimeout(() => {
+                        respawnInCurrentPit();
+                    }, 1000);
+                } else {
+                    gameState = 'GAMEOVER';
+                    document.getElementById('game-over').style.display = 'flex';
+                }
+            }
+        }
+    }
+
+    // Camera Tracking
+    camera.position.x += (cameraTarget.x - 9 - camera.position.x) * 0.05;
+    camera.position.z += (cameraTarget.z - 9 - camera.position.z) * 0.05;
+    camera.lookAt(cameraTarget.x, 0, cameraTarget.z);
+
+    // Update Tiny Swimming Fishes
+    tiny3DFishes.forEach(tf => {
+        tf.angle += tf.speed;
+        tf.mesh.position.x = tf.center.x + Math.cos(tf.angle) * tf.radius;
+        tf.mesh.position.z = tf.center.z + Math.sin(tf.angle) * tf.radius;
+        tf.mesh.rotation.y = -tf.angle - (tf.speed > 0 ? Math.PI / 2 : -Math.PI / 2);
+    });
+
+    spawnBubbles();
+    updateSplash();
+    updateRain();
+}
+
+function animate() {
+    requestAnimationFrame(animate);
+    updateGameLogic();
+    renderer.render(scene, camera);
+}
+
+// Start Game Engine
+window.onload = init;
+</script>
+</body>
+</html>
