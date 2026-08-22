@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Flip Fish 3D</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#7ec8ef;font-family:Arial,sans-serif;touch-action:none}
+canvas{display:block;width:100%;height:100%}
+#ui{position:fixed;inset:0;pointer-events:none;color:#fff;text-shadow:0 2px 4px #174}
+#title{position:absolute;top:12px;left:50%;transform:translateX(-50%);font-size:24px;font-weight:800}
+#score{position:absolute;top:14px;left:14px;font-size:18px;font-weight:700}
+#help{position:absolute;bottom:22px;left:50%;transform:translateX(-50%);background:#0008;padding:10px 16px;border-radius:18px;font-weight:700;text-align:center}
+#bar{position:absolute;top:48px;left:50%;transform:translateX(-50%);width:230px;height:18px;border:2px solid #fff;border-radius:20px;background:#0007;overflow:hidden}
+#fill{height:100%;width:0;background:#ffd21f}
+#panel{display:none;pointer-events:auto;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(88vw,360px);padding:28px 20px;background:#071c28ee;border:2px solid #ffffff66;border-radius:24px;text-align:center}
+#panel h1{margin:0 0 10px;font-size:34px}
+#panel p{margin:8px 0 18px;font-size:17px}
+button{border:0;border-radius:14px;padding:13px 25px;font-size:18px;font-weight:800;background:#ffd21f;color:#263238}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui">
+  <div id="title">🐟 FLIP FISH</div>
+  <div id="score">गड्ढा 1 / 6</div>
+  <div id="bar"><div id="fill"></div></div>
+  <div id="help">स्क्रीन दबाकर रखो → ताकत भरो<br>छोड़ो → मछली उछलेगी</div>
+  <div id="panel"><h1 id="result">🏆 जीत!</h1><p id="reason"></p><button id="again">🔄 फिर खेलें</button></div>
+</div>
+
+<script>
+const canvas=document.getElementById('c'),ctx=canvas.getContext('2d');
+let W,H,DPR;
+function resize(){DPR=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;canvas.width=W*DPR;canvas.height=H*DPR;canvas.style.width=W+'px';canvas.style.height=H+'px';ctx.setTransform(DPR,0,0,DPR,0,0)}
+addEventListener('resize',resize);resize();
+
+const pits=[
+ {z:0,r:3.0},{z:12,r:2.5},{z:29,r:2.8},{z:43,r:2.3},
+ {z:64,r:3.0},{z:86,r:2.5}
+];
+const seaZ=108;
+let fish={x:0,y:1.05,z:0,vy:0,vz:0,rot:0};
+let pit=0,charging=false,charge=0,dead=false,won=false;
+let camZ=0,particles=[];
+const GRAV=-0.018;
+
+function reset(){
+ fish={x:0,y:1.05,z:0,vy:0,vz:0,rot:0};
+ pit=0;charging=false;charge=0;dead=won=false;camZ=0;
+ document.getElementById('panel').style.display='none';
+ document.getElementById('score').textContent='गड्ढा 1 / 6';
+}
+document.getElementById('again').onclick=reset;
+
+function start(e){if(dead||won)return;e.preventDefault();charging=true}
+function release(e){if(dead||won)return;if(!charging)return;charging=false;
+ const p=charge/100;
+ fish.vy=.20+.34*p;
+ fish.vz=.20+.24*p;
+ charge=0;
+}
+addEventListener('pointerdown',start,{passive:false});
+addEventListener('pointerup',release,{passive:false});
+addEventListener('pointercancel',release,{passive:false});
+
+function project(x,y,z){
+ const scale=360/(z+30);
+ return {x:W/2+x*scale,y:H*.58-y*scale,s:scale};
+}
+function lerp(a,b,t){return a+(b-a)*t}
+
+function drawSky(){
+ let g=ctx.createLinearGradient(0,0,0,H);
+ g.addColorStop(0,'#75c8ef');g.addColorStop(.58,'#c9eff9');g.addColorStop(1,'#a8d883');
+ ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+}
+function drawGround(){
+ const horizon=H*.56;
+ ctx.fillStyle='#56a83f';
+ ctx.beginPath();ctx.moveTo(0,horizon);ctx.lineTo(W,horizon);
+ ctx.lineTo(W,H);ctx.lineTo(0,H);ctx.closePath();ctx.fill();
+ for(let i=0;i<65;i++){
+   const z=(i*3.7+(camZ%3.7));
+   const zz=z+2;
+   const p=project(((i*47)%100-50)/12,.01,zz);
+   ctx.strokeStyle='#2f8738aa';ctx.lineWidth=1;
+   ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(p.x-2,p.y-8);ctx.stroke();
+ }
+}
+function drawPit(p){
+ const zz=p.z-camZ;
+ if(zz<-25||zz>145)return;
+ const q=project(0,.03,zz);
+ const rx=p.r*q.s, ry=rx*.28;
+ ctx.fillStyle='#147fc4';
+ ctx.beginPath();ctx.ellipse(q.x,q.y,rx,ry,0,0,Math.PI*2);ctx.fill();
+ ctx.strokeStyle='#5ed7f2';ctx.lineWidth=3;ctx.stroke();
+ ctx.fillStyle='#ffffff33';
+ ctx.beginPath();ctx.ellipse(q.x-rx*.25,q.y-ry*.15,rx*.38,ry*.22,0,0,Math.PI*2);ctx.fill();
+}
+function drawSea(){
+ const zz=seaZ-camZ;if(zz<0)return;
+ const q=project(0,.05,zz),rx=260*q.s,ry=rx*.23;
+ ctx.fillStyle='#087dcc';ctx.beginPath();ctx.ellipse(q.x,q.y,rx,ry,0,0,Math.PI*2);ctx.fill();
+ ctx.strokeStyle='#70e5ff';ctx.lineWidth=4;ctx.stroke();
+}
+function drawFish(){
+ const q=project(fish.x,fish.y,fish.z-camZ);
+ ctx.save();ctx.translate(q.x,q.y);ctx.rotate(fish.rot);
+ const s=Math.max(.65,Math.min(2,q.s/35))*1.7;
+ ctx.scale(s,s);
+ ctx.fillStyle='#f28b18';
+ ctx.beginPath();ctx.ellipse(0,0,30,18,0,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle='#ffb52c';
+ ctx.beginPath();ctx.moveTo(-25,0);ctx.lineTo(-48,-18);ctx.lineTo(-44,0);ctx.lineTo(-48,18);ctx.closePath();ctx.fill();
+ ctx.fillStyle='#ffb52c';ctx.beginPath();ctx.moveTo(0,-14);ctx.lineTo(8,-29);ctx.lineTo(15,-10);ctx.closePath();ctx.fill();
+ ctx.fillStyle='#111';ctx.beginPath();ctx.arc(20,-5,4,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(21,-6,1.4,0,Math.PI*2);ctx.fill();
+ ctx.restore();
+}
+function drawFinish(){
+ const zz=seaZ-camZ;
+ if(zz<-20||zz>130)return;
+ const q=project(0,7,zz);
+ ctx.fillStyle='#fff';ctx.font='800 22px Arial';ctx.textAlign='center';
+ ctx.fillText('🌊 समुद्र = जीत!',q.x,q.y);
+}
+
+function lose(msg){
+ if(dead||won)return;dead=true;
+ document.getElementById('result').textContent='💀 GAME OVER';
+ document.getElementById('reason').textContent=msg;
+ document.getElementById('panel').style.display='block';
+}
+function win(){
+ if(dead||won)return;won=true;
+ document.getElementById('result').textContent='🏆 YOU WIN!';
+ document.getElementById('reason').textContent='🐟 मछली सभी 6 गड्ढे पार करके समुद्र तक पहुँच गई!';
+ document.getElementById('panel').style.display='block';
+}
+
+function update(){
+ if(dead||won)return;
+ if(charging){
+   charge=Math.min(100,charge+1.25);
+   fish.y=1.05-.38*(charge/100);
+   fish.rot=0;
+ }else{
+   fish.vy+=GRAV;
+   fish.y+=fish.vy;
+   fish.z+=fish.vz;
+   fish.rot=lerp(fish.rot,-fish.vy*1.8,.18);
+   fish.vz*=.992;
+   if(fish.y<.15){
+     fish.y=.15;
+     const next=pits[pit+1];
+     if(next){
+       const d=Math.abs(fish.z-next.z);
+       if(d<=next.r){
+         pit++;
+         fish.y=1.05;fish.vy=0;fish.vz=0;
+         document.getElementById('score').textContent=`गड्ढा ${pit+1} / 6`;
+       }else{
+         lose('मछली अगले पानी के गड्ढे तक नहीं पहुँच पाई।');
+       }
+     }else if(fish.z>=seaZ-4){
+       win();
+     }else{
+       lose('मछली पानी में नहीं गिरी।');
+     }
+   }
+   if(fish.z>seaZ-4 && fish.y<2) win();
+   if(fish.z>seaZ+15)lose('मछली समुद्र को पार करके बहुत आगे निकल गई।');
+ }
+ camZ=lerp(camZ,Math.max(0,fish.z-3),.08);
+ document.getElementById('fill').style.width=charge+'%';
+}
+
+function frame(){
+ update();drawSky();drawGround();
+ for(const p of pits)drawPit(p);
+ drawSea();drawFinish();drawFish();
+ requestAnimationFrame(frame);
+}
+frame();
+</script>
+</body>
+</html>
