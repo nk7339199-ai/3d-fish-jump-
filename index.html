@@ -2,7 +2,7 @@
 <html lang="hi">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>3D Fish Well Jump</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐟</text></svg>">
 <link rel="manifest" href="manifest.json">
@@ -18,18 +18,23 @@
   user-select: none;
   -webkit-user-select: none;
 }
-body {
-  background-color: #2ed573;
+html, body {
+  width: 100%;
+  height: 100%;
   overflow: hidden;
+  background-color: #2ed573;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   transition: background-color 1.5s ease;
 }
 #canvas-container {
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
 }
 #start-screen {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
@@ -37,17 +42,34 @@ body {
   background-color: #000;
   background-image: url('https://files.catbox.moe/uczd75.png');
   background-size: cover;
-  background-position: center;
+  background-position: center center;
   background-repeat: no-repeat;
   z-index: 100;
   cursor: pointer;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  justify-content: flex-end;
   align-items: center;
+  padding-bottom: 90px;
+}
+.tap-to-play {
+  color: #ffffff;
+  font-size: 22px;
+  font-weight: bold;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.9);
+  background: rgba(0,0,0,0.4);
+  padding: 10px 24px;
+  border-radius: 20px;
+  animation: pulseText 1.2s infinite;
+}
+@keyframes pulseText {
+  0% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); opacity: 0.9; }
 }
 #ui {
   position: absolute;
-  top: 20px;
+  top: 25px;
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -56,14 +78,14 @@ body {
   z-index: 5;
 }
 .score {
-  font-size: 48px;
-  font-weight: bold;
+  font-size: 52px;
+  font-weight: 900;
   color: #ffffff;
-  text-shadow: 2px 2px 8px rgba(0,0,0,0.8);
+  text-shadow: 2px 2px 8px rgba(0,0,0,0.85);
 }
 .lives {
   font-size: 26px;
-  margin-top: 4px;
+  margin-top: 2px;
   text-shadow: 1px 1px 6px rgba(0,0,0,0.8);
   letter-spacing: 6px;
 }
@@ -71,13 +93,13 @@ body {
   position: absolute;
   top: 20px;
   right: 20px;
-  width: 45px;
-  height: 45px;
+  width: 46px;
+  height: 46px;
   background: rgba(0, 0, 0, 0.6);
   border: 2px solid #ffffff;
   border-radius: 50%;
   color: white;
-  font-size: 20px;
+  font-size: 22px;
   cursor: pointer;
   display: flex;
   justify-content: center;
@@ -86,8 +108,23 @@ body {
   backdrop-filter: blur(4px);
   box-shadow: 0 4px 10px rgba(0,0,0,0.3);
 }
-#music-btn:active {
-  transform: scale(0.9);
+#music-btn:active { transform: scale(0.9); }
+#pwa-install-btn {
+  position: fixed;
+  bottom: 25px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #ff4757, #ff6b81);
+  color: #ffffff;
+  border: 2px solid #ffffff;
+  padding: 12px 26px;
+  font-size: 17px;
+  font-weight: bold;
+  border-radius: 30px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+  cursor: pointer;
+  z-index: 150;
+  display: none;
 }
 #power-meter {
   position: absolute;
@@ -109,7 +146,7 @@ body {
   background: linear-gradient(90deg, #00d2ff, #fbc531, #e84118);
 }
 #game-over {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
@@ -138,7 +175,10 @@ body {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
-<div id="start-screen"></div>
+<div id="start-screen">
+  <div class="tap-to-play">👉 Tap Anywhere to Play 🐟</div>
+</div>
+<button id="pwa-install-btn">📲 Install Game (Free App)</button>
 <div id="canvas-container"></div>
 <button id="music-btn" title="Music">🔊</button>
 <div id="ui">
@@ -201,6 +241,7 @@ function initMusicControls() {
 
 let scene, camera, renderer;
 let ambientLight, dirLight;
+let ground, groundMat;
 let playerFish;
 let activeWells = [];
 let bubbles = [];
@@ -215,7 +256,6 @@ let fishPos = new THREE.Vector3();
 let fishVel = new THREE.Vector3();
 
 const GRAVITY_SEC = 34.2;
-
 let swimAngle = 0;
 
 const WELL_DIAMETER = 4.0;
@@ -224,7 +264,27 @@ const INNER_WATER_RADIUS = 0.82;
 const WATER_OFFSET_Z = -0.07;
 
 let rainSystem, rainGeo, rainCount = 1000;
-let currentWeatherIndex = -1;
+let currentEnvIndex = -1;
+
+// 4 सुंदर मौसम और लाइटिंग थीम्स (हर 10 घड़े पार करने पर)
+const ENV_THEMES = [
+  { // 0 to 9: सुहानी सुबह / हरियाली
+    bg: 0x2ed573, ground: 0x20bf6b, fog: 0x2ed573,
+    amb: 0xffffff, ambInt: 0.95, dir: 0xfff3bf, dirInt: 1.1, rain: false
+  },
+  { // 10 to 19: शाम / गोधूलि वेला (Sunset Gold)
+    bg: 0xff793f, ground: 0xcd6133, fog: 0xff793f,
+    amb: 0xffbe76, ambInt: 0.85, dir: 0xf6b93b, dirInt: 1.2, rain: false
+  },
+  { // 20 to 29: तूफानी बारिश की रात (Rainy Night)
+    bg: 0x0c2461, ground: 0x1e3799, fog: 0x0c2461,
+    amb: 0x4a69bd, ambInt: 0.45, dir: 0x6a89cc, dirInt: 0.7, rain: true
+  },
+  { // 30 to 39: जादुई नीलम / नियॉन अंतरिक्ष (Mystic Violet)
+    bg: 0x2c003e, ground: 0x511845, fog: 0x2c003e,
+    amb: 0xe056fd, ambInt: 0.7, dir: 0x00d2d3, dirInt: 1.0, rain: false
+  }
+];
 
 const loader = new THREE.TextureLoader();
 loader.setCrossOrigin('');
@@ -397,8 +457,8 @@ function init() {
   scene.add(dirLight);
 
   const groundGeo = new THREE.PlaneGeometry(350, 350);
-  const groundMat = new THREE.MeshStandardMaterial({ color: 0x2ed573, roughness: 0.9 });
-  const ground = new THREE.Mesh(groundGeo, groundMat);
+  groundMat = new THREE.MeshStandardMaterial({ color: 0x20bf6b, roughness: 0.9 });
+  ground = new THREE.Mesh(groundGeo, groundMat);
   ground.rotation.x = -Math.PI / 2;
   ground.position.y = 0;
   scene.add(ground);
@@ -416,23 +476,23 @@ function init() {
   window.addEventListener('resize', onWindowResize);
 
   const handleSurfaceDown = (e) => {
-    if (!gameStarted || e.target.closest('#music-btn') || e.target.closest('#restart-btn')) return;
+    if (!gameStarted || e.target.closest('#music-btn') || e.target.closest('#restart-btn') || e.target.closest('#pwa-install-btn')) return;
     if (gameState === 'READY') startCharge();
   };
 
   const handleSurfaceUp = (e) => {
-    if (!gameStarted || e.target.closest('#music-btn') || e.target.closest('#restart-btn')) return;
+    if (!gameStarted || e.target.closest('#music-btn') || e.target.closest('#restart-btn') || e.target.closest('#pwa-install-btn')) return;
     if (gameState === 'CHARGING') releaseJump();
   };
 
   window.addEventListener('mousedown', handleSurfaceDown);
   window.addEventListener('mouseup', handleSurfaceUp);
   window.addEventListener('touchstart', (e) => {
-    if (!gameStarted || e.target.closest('#music-btn') || e.target.closest('#restart-btn')) return;
+    if (!gameStarted || e.target.closest('#music-btn') || e.target.closest('#restart-btn') || e.target.closest('#pwa-install-btn')) return;
     if (gameState === 'READY') { e.preventDefault(); startCharge(); }
   }, { passive: false });
   window.addEventListener('touchend', (e) => {
-    if (!gameStarted || e.target.closest('#music-btn') || e.target.closest('#restart-btn')) return;
+    if (!gameStarted || e.target.closest('#music-btn') || e.target.closest('#restart-btn') || e.target.closest('#pwa-install-btn')) return;
     if (gameState === 'CHARGING') releaseJump();
   });
 
@@ -447,7 +507,7 @@ function init() {
 
 function createGrassBlades() {
   const bladeGeo = new THREE.ConeGeometry(0.1, 0.45, 4);
-  const bladeMat = new THREE.MeshStandardMaterial({ color: 0x20bf6b, roughness: 0.6 });
+  const bladeMat = new THREE.MeshStandardMaterial({ color: 0x1aa059, roughness: 0.6 });
   for (let i = 0; i < 160; i++) {
     const blade = new THREE.Mesh(bladeGeo, bladeMat);
     const x = (Math.random() - 0.5) * 100;
@@ -568,7 +628,6 @@ function getDynamicDistance(currentScore) {
   if (currentScore < 4) {
     return minDistance + (currentScore * 0.15);
   }
-
   const phase = (currentScore - 4) * 0.4;
   const cycle = (Math.sin(phase - Math.PI / 2) + 1) / 2;
   return minDistance + cycle * (maxDistance - minDistance);
@@ -626,7 +685,8 @@ function updateRain(delta) {
   if (!rainSystem || !rainSystem.visible) return;
   const positions = rainGeo.attributes.position.array;
   for (let i = 0; i < rainCount; i++) {
-      if (positions[i * 3 + 1] < 0) {
+    positions[i * 3 + 1] -= rainGeo.userData.velocities[i] * delta;
+    if (positions[i * 3 + 1] < 0) {
       positions[i * 3 + 1] = 20 + Math.random() * 5;
       positions[i * 3] = fishPos.x + (Math.random() - 0.5) * 45;
       positions[i * 3 + 2] = fishPos.z + (Math.random() - 0.5) * 45;
@@ -635,40 +695,27 @@ function updateRain(delta) {
   rainGeo.attributes.position.needsUpdate = true;
 }
 
+// हर 10 घड़े पार करने पर थीम और लाइटिंग बदलना
 function updateWeather() {
-  const weatherPhase = Math.floor(score / 35) % 4;
-  if (weatherPhase === currentWeatherIndex) return;
-  currentWeatherIndex = weatherPhase;
+  const themeIndex = Math.floor(score / 10) % ENV_THEMES.length;
+  if (themeIndex === currentEnvIndex) return;
+  currentEnvIndex = themeIndex;
 
-  if (weatherPhase === 0) {
-    scene.background = new THREE.Color(0x2ed573);
-    scene.fog.color = new THREE.Color(0x2ed573);
-    ambientLight.color.setHex(0xffffff);
-    ambientLight.intensity = 0.95;
-    dirLight.color.setHex(0xfff3bf);
-    if (rainSystem) rainSystem.visible = false;
-  } else if (weatherPhase === 1) {
-    scene.background = new THREE.Color(0xff7043);
-    scene.fog.color = new THREE.Color(0xff7043);
-    ambientLight.color.setHex(0xffab91);
-    ambientLight.intensity = 0.7;
-    dirLight.color.setHex(0xffd54f);
-    if (rainSystem) rainSystem.visible = false;
-  } else if (weatherPhase === 2) {
-    scene.background = new THREE.Color(0x0a192f);
-    scene.fog.color = new THREE.Color(0x0a192f);
-    ambientLight.color.setHex(0x37474f);
-    ambientLight.intensity = 0.35;
-    dirLight.color.setHex(0x546e7a);
-    if (rainSystem) rainSystem.visible = true;
-  } else if (weatherPhase === 3) {
-    scene.background = new THREE.Color(0x280659);
-    scene.fog.color = new THREE.Color(0x280659);
-    ambientLight.color.setHex(0xba68c8);
-    ambientLight.intensity = 0.6;
-    dirLight.color.setHex(0x00e5ff);
-    if (rainSystem) rainSystem.visible = false;
-  }
+  const currentTheme = ENV_THEMES[themeIndex];
+
+  document.body.style.backgroundColor = '#' + currentTheme.bg.toString(16).padStart(6, '0');
+  scene.background.setHex(currentTheme.bg);
+  scene.fog.color.setHex(currentTheme.fog);
+
+  if (groundMat) groundMat.color.setHex(currentTheme.ground);
+
+  ambientLight.color.setHex(currentTheme.amb);
+  ambientLight.intensity = currentTheme.ambInt;
+
+  dirLight.color.setHex(currentTheme.dir);
+  dirLight.intensity = currentTheme.dirInt;
+
+  if (rainSystem) rainSystem.visible = currentTheme.rain;
 }
 
 function spawnBubbles(delta) {
@@ -785,7 +832,7 @@ function releaseJump() {
 function resetGame() {
   score = 0;
   lives = 3;
-  currentWeatherIndex = -1;
+  currentEnvIndex = -1;
   document.getElementById('score').innerText = score;
   updateLivesUI();
   document.getElementById('game-over').style.display = 'none';
@@ -935,6 +982,7 @@ function updateGameLogic(delta) {
         document.getElementById('score').innerText = score;
         createSplashEffect(fishPos, true, false);
 
+        // हर 10 घड़े पार करने पर मौसम/लाइटिंग बदल जाएगी
         updateWeather();
 
         disposeWellEntity(curWell);
@@ -988,6 +1036,36 @@ function animate() {
   renderer.render(scene, camera);
 }
 
+// PWA Install Button Script
+let deferredPrompt;
+const installBtn = document.getElementById('pwa-install-btn');
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  if (installBtn) {
+    installBtn.style.display = 'block';
+  }
+});
+
+if (installBtn) {
+  installBtn.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        installBtn.style.display = 'none';
+      }
+      deferredPrompt = null;
+    }
+  });
+}
+
+window.addEventListener('appinstalled', () => {
+  if (installBtn) installBtn.style.display = 'none';
+});
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js').catch(() => {});
@@ -998,5 +1076,3 @@ window.onload = init;
 </script>
 </body>
 </html>
-
-    positions[i * 3 + 1] -= rainGeo.userData.velocities[i] * delta;
