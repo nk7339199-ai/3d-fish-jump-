@@ -1,0 +1,21 @@
+{
+  "name": "3D Fish Well Jump",
+  "short_name": "FishJump",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#2ed573",
+  "theme_color": "#2ed573",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://files.catbox.moe/uczd75.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://files.catbox.moe/uczd75.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
