@@ -7,6 +7,11 @@
 <meta name="title" content="3D Fish Jump - Free Online HTML5 Game">
 <meta name="description" content="Help the fish jump across water ponds and explore deep 3D ocean worlds!">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22[http://www.w3.org/2000/svg%22](http://www.w3.org/2000/svg%22) viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐟</text></svg>">
+    <link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2ed573">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="FishJump">
+    
 <style>
 * {
 margin: 0;
@@ -1197,5 +1202,13 @@ renderer.render(scene, camera);
 }
 window.onload = init;
 </script>
+    <script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+    </script>
+    
 </body>
 </html> 
