@@ -3,19 +3,15 @@
   "short_name": "FishJump",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#2ed573",
-  "theme_color": "#2ed573",
+  "background_color": "#050b14",
+  "theme_color": "#050b14",
   "orientation": "portrait",
   "icons": [
     {
       "src": "https://files.catbox.moe/uczd75.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "https://files.catbox.moe/uczd75.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     }
   ]
 }
